@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rosenberg Lab Calculators</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <h1>Rosenberg Lab Calculators</h1>
+    <p class="subtitle">Local tools for common lab math. Add more calculators as we need them.</p>
+  </header>
+
+  <nav class="tool-nav">
+    <button class="tool-nav-btn active" data-tool="hifi">HiFi / Gibson Assembly</button>
+    <button class="tool-nav-btn" data-tool="crispr">CRISPR Electroporation Mix</button>
+    <button class="tool-nav-btn" data-tool="western">Western Sample Buffer</button>
+    <button class="tool-nav-btn" data-tool="primer">Primer Tm / Ta</button>
+    <button class="tool-nav-btn" data-tool="digest">Restriction Digest</button>
+    <button class="tool-nav-btn" data-tool="guides">Guide Design</button>
+    <button class="tool-nav-btn" disabled title="Add your next calculator here">+ More coming soon</button>
+  </nav>
+
+  <div class="print-header">
+    <div class="print-header-lab">Rosenberg Lab Calculators</div>
+    <div class="print-header-tool" id="print-tool-name">HiFi (Gibson) Assembly DNA Ratio Calculator</div>
+    <div class="print-header-date" id="print-date"></div>
+  </div>
+
+  <main>
+    <section id="tool-hifi" class="tool-panel active">
+      <div class="tool-head">
+        <h2>HiFi (Gibson) Assembly DNA Ratio Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="hifi">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="HiFi (Gibson) Assembly DNA Ratio Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="hifi-mode-switch">
+        <button class="mode-btn active" data-mode="two">2-Fragment (Vector + Insert)</button>
+        <button class="mode-btn" data-mode="multi">Multi-Fragment (Equimolar)</button>
+      </div>
+
+      <!-- ===================== 2-FRAGMENT MODE ===================== -->
+      <div id="mode-two" class="mode-panel active">
+        <p class="mode-desc">
+          Standard 2-way assembly (vector + insert), NEB-calculator style. Default molar ratio is
+          <strong>3:1 insert:vector</strong>.
+        </p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3>Vector</h3>
+            <label>Length
+              <div class="length-input">
+                <input type="number" id="two-vector-len" min="0" step="any" value="3000">
+                <select id="two-vector-unit">
+                  <option value="bp" selected>bp</option>
+                  <option value="kb">kb</option>
+                </select>
+              </div>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Insert</h3>
+            <label>Length
+              <div class="length-input">
+                <input type="number" id="two-insert-len" min="0" step="any" value="1000">
+                <select id="two-insert-unit">
+                  <option value="bp" selected>bp</option>
+                  <option value="kb">kb</option>
+                </select>
+              </div>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Ratio</h3>
+            <label>Insert : Vector (molar)
+              <input type="number" id="two-ratio" min="0" step="any" value="3">
+            </label>
+          </div>
+        </div>
+
+        <div class="mode-switch" id="two-know-switch">
+          <button class="mode-btn active" data-know="vector">I know the vector amount</button>
+          <button class="mode-btn" data-know="insert">I know the insert amount</button>
+        </div>
+
+        <div class="card" style="max-width:320px;">
+          <h3 id="two-known-title">Vector amount</h3>
+          <label id="two-known-label">Amount you have (ng)
+            <input type="number" id="two-known-ng" min="0" step="any" value="50">
+          </label>
+        </div>
+
+        <div class="result">
+          <div class="result-main">
+            <span class="result-label" id="two-result-label">Insert needed</span>
+            <span class="result-value" id="two-result-ng">—</span>
+          </div>
+          <div class="result-sub" id="two-result-detail"></div>
+        </div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code id="two-formula">insert (ng) = ratio × vector (ng) × (insert bp / vector bp)</code>
+        </details>
+
+        <!-- ---- Master Mix ---- -->
+        <div class="mm-section">
+          <h3 class="mm-title">Master Mix Setup</h3>
+          <p class="mode-desc">
+            NEBuilder HiFi reactions use equal volumes of 2× Master Mix and total DNA/water.
+            Enter each fragment's stock concentration — fragments that would pipette below the
+            minimum volume are diluted automatically.
+          </p>
+
+          <div class="card-grid mm-settings">
+            <div class="card">
+              <label>Total DNA/water volume (µL)
+                <input type="number" id="two-mm-dnavol" min="0" step="any" value="5">
+              </label>
+            </div>
+            <div class="card">
+              <label>Ideal min pipette (µL)
+                <input type="number" id="two-mm-ideal" min="0" step="any" value="1">
+              </label>
+              <label>Fallback min (µL)
+                <input type="number" id="two-mm-fallback" min="0" step="any" value="0.5">
+              </label>
+            </div>
+          </div>
+
+          <table class="fragment-table mm-table">
+            <thead>
+              <tr>
+                <th>Fragment</th>
+                <th>Stock conc (ng/µL)</th>
+                <th>Pipette (µL)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Vector</td>
+                <td><input type="number" id="two-mm-vector-conc" min="0" step="any" placeholder="ng/µL"></td>
+                <td class="mm-vol" id="two-mm-vector-vol">—</td>
+              </tr>
+              <tr>
+                <td>Insert</td>
+                <td><input type="number" id="two-mm-insert-conc" min="0" step="any" placeholder="ng/µL"></td>
+                <td class="mm-vol" id="two-mm-insert-vol">—</td>
+              </tr>
+              <tr class="mm-water-row">
+                <td>ddH₂O</td>
+                <td></td>
+                <td class="mm-vol" id="two-mm-water">—</td>
+              </tr>
+              <tr class="mm-mm-row">
+                <td>2× HiFi MM</td>
+                <td></td>
+                <td class="mm-vol" id="two-mm-mm">—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="result">
+            <div class="result-main">
+              <span class="result-label">Total reaction</span>
+              <span class="result-value" id="two-mm-total">—</span>
+            </div>
+            <div class="result-sub" id="two-mm-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== MULTI-FRAGMENT MODE ===================== -->
+      <div id="mode-multi" class="mode-panel">
+        <p class="mode-desc">
+          For 3+ fragment HiFi assemblies, NEB recommends using equimolar amounts of each
+          fragment. Set the target amount per fragment (pmol) and enter each fragment's length.
+        </p>
+
+        <div class="card" style="max-width:320px;">
+          <h3>Target amount per fragment</h3>
+          <label>pmol
+            <input type="number" id="multi-pmol" min="0" step="any" value="0.025">
+          </label>
+        </div>
+
+        <div class="table-scroll">
+          <table class="fragment-table" id="fragment-table">
+            <thead>
+              <tr>
+                <th>Fragment</th>
+                <th>Length</th>
+                <th>Target (ng)</th>
+                <th>Stock conc (ng/µL)</th>
+                <th>Pipette (µL)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fragment-rows"></tbody>
+          </table>
+        </div>
+
+        <button class="add-row-btn" id="add-fragment">+ Add fragment</button>
+
+        <div class="result">
+          <div class="result-main">
+            <span class="result-label">Total DNA (by mass)</span>
+            <span class="result-value" id="multi-result-total">—</span>
+          </div>
+        </div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code>DNA (ng) = (pmol × bp × 650) / 1000</code>
+        </details>
+
+        <!-- ---- Master Mix ---- -->
+        <div class="mm-section">
+          <h3 class="mm-title">Master Mix Setup</h3>
+          <p class="mode-desc">
+            Enter each fragment's stock concentration in the table above. NEBuilder HiFi reactions
+            use equal volumes of 2× Master Mix and total DNA/water; fragments that would pipette
+            below the minimum volume are diluted automatically.
+          </p>
+
+          <div class="card-grid mm-settings">
+            <div class="card">
+              <label>Total DNA/water volume (µL)
+                <input type="number" id="multi-mm-dnavol" min="0" step="any" value="5">
+              </label>
+            </div>
+            <div class="card">
+              <label>Ideal min pipette (µL)
+                <input type="number" id="multi-mm-ideal" min="0" step="any" value="1">
+              </label>
+              <label>Fallback min (µL)
+                <input type="number" id="multi-mm-fallback" min="0" step="any" value="0.5">
+              </label>
+            </div>
+          </div>
+
+          <table class="fragment-table mm-table">
+            <tbody>
+              <tr class="mm-water-row">
+                <td>ddH₂O</td>
+                <td class="mm-vol" id="multi-mm-water">—</td>
+              </tr>
+              <tr class="mm-mm-row">
+                <td>2× HiFi MM</td>
+                <td class="mm-vol" id="multi-mm-mm">—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="result">
+            <div class="result-main">
+              <span class="result-label">Total reaction</span>
+              <span class="result-value" id="multi-mm-total">—</span>
+            </div>
+            <div class="result-sub" id="multi-mm-status"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================== CRISPR ELECTROPORATION MIX ===================== -->
+    <section id="tool-crispr" class="tool-panel">
+      <div class="tool-head">
+        <h2>CRISPR/Cas9 Electroporation Mix Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="crispr">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="CRISPR/Cas9 Electroporation Mix Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+      <p class="mode-desc">
+        Combine a guide (Cas9/sgRNA) prep and a repair template (insert) prep at a target molar
+        ratio. Whichever prep is the limiting factor — based on its concentration, size, and
+        available volume — sets the scale; the calculator tells you how much of the other to add
+        to match it.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Guide (Cas9/sgRNA)</h3>
+          <label>Length
+            <div class="length-input">
+              <input type="number" id="cr-guide-len" min="0" step="any" value="8000">
+              <select id="cr-guide-unit">
+                <option value="bp" selected>bp</option>
+                <option value="kb">kb</option>
+              </select>
+            </div>
+          </label>
+          <label>Concentration (ng/µL)
+            <input type="number" id="cr-guide-conc" min="0" step="any" value="500">
+          </label>
+          <label>Available volume (µL)
+            <input type="number" id="cr-guide-vol" min="0" step="any" value="30">
+          </label>
+        </div>
+
+        <div class="card">
+          <h3>Insert (repair template)</h3>
+          <label>Length
+            <div class="length-input">
+              <input type="number" id="cr-insert-len" min="0" step="any" value="2000">
+              <select id="cr-insert-unit">
+                <option value="bp" selected>bp</option>
+                <option value="kb">kb</option>
+              </select>
+            </div>
+          </label>
+          <label>Concentration (ng/µL)
+            <input type="number" id="cr-insert-conc" min="0" step="any" value="200">
+          </label>
+          <label>Available volume (µL)
+            <input type="number" id="cr-insert-vol" min="0" step="any" value="30">
+          </label>
+        </div>
+
+        <div class="card">
+          <h3>Ratio (guide : insert)</h3>
+          <label>Molar parts
+            <div class="ratio-pair">
+              <input type="number" id="cr-guide-parts" min="0" step="any" value="1">
+              <span>:</span>
+              <input type="number" id="cr-insert-parts" min="0" step="any" value="3">
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <table class="fragment-table mm-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Volume to add (µL)</th>
+            <th>Delivered</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Guide</td>
+            <td class="mm-vol" id="cr-guide-result">—</td>
+            <td class="table-note" id="cr-guide-detail"></td>
+          </tr>
+          <tr>
+            <td>Insert</td>
+            <td class="mm-vol" id="cr-insert-result">—</td>
+            <td class="table-note" id="cr-insert-detail"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="result">
+        <div class="result-main">
+          <span class="result-label">Limiting factor</span>
+          <span class="result-value" id="cr-limiting">—</span>
+        </div>
+        <div class="result-sub" id="cr-total-detail"></div>
+      </div>
+
+      <details class="formula">
+        <summary>Formula used</summary>
+        <code>unit = min(max pmol ÷ ratio parts) across both fragments; each fragment's volume = (unit × its parts) converted to ng, ÷ its concentration</code>
+      </details>
+    </section>
+
+    <!-- ===================== WESTERN BLOT SAMPLE BUFFER ===================== -->
+    <section id="tool-western" class="tool-panel">
+      <div class="tool-head">
+        <h2>Western Blot Sample Buffer Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="western">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="Western Blot Sample Buffer Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+      <p class="mode-desc">
+        Mix protein sample with DTT and concentrated sample buffer before boiling. Solve either
+        from a target total volume, or from how much sample you have on hand.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Reagent dilution factors</h3>
+          <label>Sample buffer (e.g. 4× → 1×)
+            <input type="number" id="wb-buffer-factor" min="1" step="any" value="4">
+          </label>
+          <label>DTT stock (e.g. 10× → 1×)
+            <input type="number" id="wb-dtt-factor" min="1" step="any" value="10">
+          </label>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="wb-know-switch">
+        <button class="mode-btn active" data-know="total">I know the total volume</button>
+        <button class="mode-btn" data-know="sample">I know the sample volume</button>
+      </div>
+
+      <div class="card" style="max-width:320px;">
+        <h3 id="wb-known-title">Total volume</h3>
+        <label id="wb-known-label">Volume (µL)
+          <input type="number" id="wb-known-vol" min="0" step="any" value="120">
+        </label>
+        <div class="preset-row" id="wb-presets">
+          <button type="button" class="preset-btn" data-preset="30">30 µL</button>
+          <button type="button" class="preset-btn" data-preset="60">60 µL</button>
+          <button type="button" class="preset-btn" data-preset="120">120 µL</button>
+        </div>
+      </div>
+
+      <table class="fragment-table mm-table">
+        <tbody>
+          <tr><td>Sample</td><td class="mm-vol" id="wb-sample-vol">—</td></tr>
+          <tr><td>DTT</td><td class="mm-vol" id="wb-dtt-vol">—</td></tr>
+          <tr><td>4× Sample buffer</td><td class="mm-vol" id="wb-buffer-vol">—</td></tr>
+          <tr class="mm-mm-row"><td>Total</td><td class="mm-vol" id="wb-total-vol">—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="result-sub" id="wb-status"></div>
+
+      <details class="formula">
+        <summary>Formula used</summary>
+        <code id="wb-formula">buffer = total ÷ buffer factor; DTT = total ÷ DTT factor; sample = total − buffer − DTT</code>
+      </details>
+    </section>
+
+    <!-- ===================== PRIMER Tm / Ta ===================== -->
+    <section id="tool-primer" class="tool-panel">
+      <div class="tool-head">
+        <h2>Primer Tm / Ta Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="primer">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="Primer Tm / Ta Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+      <p class="mode-desc">
+        Replicates the method behind the
+        <a href="https://tmcalculator.neb.com" target="_blank" rel="noopener">NEB Tm Calculator</a>
+        (SantaLucia nearest-neighbor thermodynamics, Owczarzy/Schildkraut salt correction, and
+        each enzyme's empirical annealing-temp rule) so you get matching Tm/Ta values without
+        leaving this page. Enter one primer for Tm only, or a pair for Tm + Ta.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Polymerase</h3>
+          <label>Enzyme
+            <select id="pr-enzyme"></select>
+          </label>
+          <label>Primer concentration (nM)
+            <input type="number" id="pr-conc" min="0" step="any" value="500">
+          </label>
+          <label id="pr-salt-wrap" style="display:none;">Monovalent salt (mM)
+            <input type="number" id="pr-salt" min="0" step="any" value="50">
+          </label>
+        </div>
+
+        <div class="card">
+          <h3>Primer 1</h3>
+          <label>Sequence (5′→3′)
+            <input type="text" id="pr-seq1" class="mono-input" placeholder="ATGGCTAGCAAAGGAGAAGAA...">
+          </label>
+          <button type="button" class="add-row-btn" id="pr-copy1-mfold">Copy &amp; open DNA folding tool</button>
+          <button type="button" class="add-row-btn" id="pr-copy1">Copy &amp; open OligoAnalyzer</button>
+        </div>
+
+        <div class="card">
+          <h3>Primer 2 <span class="table-note">(optional — for Ta)</span></h3>
+          <label>Sequence (5′→3′)
+            <input type="text" id="pr-seq2" class="mono-input" placeholder="GTAAAACGACGGCCAGT...">
+          </label>
+          <button type="button" class="add-row-btn" id="pr-copy2-mfold">Copy &amp; open DNA folding tool</button>
+          <button type="button" class="add-row-btn" id="pr-copy2">Copy &amp; open OligoAnalyzer</button>
+        </div>
+      </div>
+
+      <table class="fragment-table mm-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Length</th>
+            <th>%GC</th>
+            <th>Tm</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Primer 1</td><td id="pr-len1">—</td><td id="pr-gc1">—</td><td class="mm-vol" id="pr-tm1">—</td></tr>
+          <tr><td>Primer 2</td><td id="pr-len2">—</td><td id="pr-gc2">—</td><td class="mm-vol" id="pr-tm2">—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="result">
+        <div class="result-main">
+          <span class="result-label">Annealing temp (Ta)</span>
+          <span class="result-value" id="pr-ta">—</span>
+        </div>
+        <div class="result-sub" id="pr-status"></div>
+      </div>
+
+      <details class="formula">
+        <summary>Formula used</summary>
+        <code>
+          Tm = ΔH ÷ (ΔS + R·ln[primer]) − 273.15, nearest-neighbor sums per SantaLucia (1998) PNAS
+          95:1460-5, salt-corrected per Owczarzy et al. (2004) Biochem 43:3537-54 (or Schildkraut
+          1965 log-salt correction for Phusion). Ta uses each enzyme's published empirical
+          adjustment. Not affiliated with NEB — for other enzymes, use Custom or check
+          tmcalculator.neb.com directly.
+        </code>
+      </details>
+
+      <!-- ---- Dimer check ---- -->
+      <div class="mm-section">
+        <h3 class="mm-title">Dimer Check</h3>
+        <p class="mode-desc">
+          Scans every possible antiparallel offset between the strands for the longest run of
+          Watson-Crick complementary bases, then scores that run with the same nearest-neighbor
+          thermodynamics as the Tm calculation above — the same approach IDT's OligoAnalyzer
+          describes for its Self-Dimer / Hetero-Dimer check. Not affiliated with IDT and not
+          guaranteed to match their exact numbers (their calculation runs server-side); this uses
+          the standard published method with no reaction-salt adjustment to ΔG.
+        </p>
+
+        <div class="dimer-block">
+          <h3>Self-Dimer — Primer 1</h3>
+          <div id="pr-dimer-self1"></div>
+        </div>
+
+        <div class="dimer-block">
+          <h3>Self-Dimer — Primer 2</h3>
+          <div id="pr-dimer-self2"></div>
+        </div>
+
+        <div class="dimer-block">
+          <h3>Hetero-Dimer — Primer 1 × Primer 2</h3>
+          <div id="pr-dimer-hetero"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RESTRICTION DIGEST ===================== -->
+    <section id="tool-digest" class="tool-panel">
+      <div class="tool-head">
+        <h2>Restriction Digest Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="digest">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="Restriction Digest Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="digest-mode-switch">
+        <button class="mode-btn active" data-mode="test">Test Digest (Diagnostic)</button>
+        <button class="mode-btn" data-mode="mass">Mass-Based Digest (µg)</button>
+      </div>
+
+      <!-- ===================== TEST DIGEST ===================== -->
+      <div id="digestmode-test" class="mode-panel active">
+        <p class="mode-desc">
+          Quick screening digest to confirm a construct: a fixed volume of miniprep DNA cut
+          directly, no need to know its concentration.
+        </p>
+
+        <div class="mode-switch" id="rd-test-enzcount-switch">
+          <button class="mode-btn active" data-count="1">1 Enzyme</button>
+          <button class="mode-btn" data-count="2">2 Enzymes</button>
+        </div>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3>Reaction</h3>
+            <label>Total volume (µL)
+              <input type="number" id="rd-test-total" min="0" step="any" value="30">
+            </label>
+            <label>DNA volume (µL)
+              <input type="number" id="rd-test-dna-vol" min="0" step="any" value="1">
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Enzyme 1</h3>
+            <label>Volume (µL)
+              <input type="number" id="rd-test-enz1-vol" min="0" step="any" value="0.3">
+            </label>
+          </div>
+
+          <div class="card" id="rd-test-enz2-wrap" style="display:none;">
+            <h3>Enzyme 2</h3>
+            <label>Volume (µL)
+              <input type="number" id="rd-test-enz2-vol" min="0" step="any" value="0.3">
+            </label>
+          </div>
+        </div>
+
+        <table class="fragment-table mm-table">
+          <tbody>
+            <tr><td>DNA</td><td class="mm-vol" id="rd-test-out-dna">—</td></tr>
+            <tr><td>Enzyme 1</td><td class="mm-vol" id="rd-test-out-enz1">—</td></tr>
+            <tr id="rd-test-out-enz2-row" style="display:none;"><td>Enzyme 2</td><td class="mm-vol" id="rd-test-out-enz2">—</td></tr>
+            <tr><td>10× NEB Buffer</td><td class="mm-vol" id="rd-test-out-buffer">—</td></tr>
+            <tr class="mm-water-row"><td>ddH₂O</td><td class="mm-vol" id="rd-test-out-water">—</td></tr>
+            <tr class="mm-mm-row"><td>Total</td><td class="mm-vol" id="rd-test-out-total">—</td></tr>
+          </tbody>
+        </table>
+
+        <div class="result-sub" id="rd-test-status"></div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code>buffer = total ÷ 10 (10× → 1×); water = total − DNA − enzyme(s) − buffer</code>
+        </details>
+
+        <!-- ---- Master Mix (multiple constructs, same enzymes) ---- -->
+        <div class="mm-section">
+          <h3 class="mm-title">Master Mix (Multiple Constructs)</h3>
+          <p class="mode-desc">
+            Screening several constructs with the same enzyme(s)? Make one mix of enzyme +
+            buffer + water using the recipe above, aliquot it into each tube, then add 1 µL of
+            each construct's DNA separately.
+          </p>
+
+          <div class="card-grid mm-settings">
+            <div class="card">
+              <label># of constructs
+                <input type="number" id="rd-test-mm-n" min="1" step="1" value="4">
+              </label>
+              <label>Extra reactions (pipetting overage)
+                <input type="number" id="rd-test-mm-extra" min="0" step="1" value="1">
+              </label>
+            </div>
+          </div>
+
+          <table class="fragment-table mm-table">
+            <tbody>
+              <tr><td>Enzyme 1 (total)</td><td class="mm-vol" id="rd-test-mm-enz1">—</td></tr>
+              <tr id="rd-test-mm-enz2-row" style="display:none;"><td>Enzyme 2 (total)</td><td class="mm-vol" id="rd-test-mm-enz2">—</td></tr>
+              <tr><td>10× NEB Buffer (total)</td><td class="mm-vol" id="rd-test-mm-buffer">—</td></tr>
+              <tr class="mm-water-row"><td>ddH₂O (total)</td><td class="mm-vol" id="rd-test-mm-water">—</td></tr>
+              <tr class="mm-mm-row"><td>Master mix total</td><td class="mm-vol" id="rd-test-mm-total">—</td></tr>
+            </tbody>
+          </table>
+
+          <div class="result">
+            <div class="result-main">
+              <span class="result-label">Aliquot per tube</span>
+              <span class="result-value" id="rd-test-mm-aliquot">—</span>
+            </div>
+            <div class="result-sub" id="rd-test-mm-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== MASS-BASED DIGEST ===================== -->
+      <div id="digestmode-mass" class="mode-panel">
+        <p class="mode-desc">
+          Digest a defined mass of DNA to completion — small-volume minipreps (1.5–2 µg) and
+          large-plasmid digests (10 µg) use the same rule: 1 unit of enzyme per µg of DNA, per
+          enzyme, in a 100 µL reaction.
+        </p>
+
+        <div class="mode-switch" id="rd-mass-enzcount-switch">
+          <button class="mode-btn active" data-count="1">1 Enzyme</button>
+          <button class="mode-btn" data-count="2">2 Enzymes</button>
+        </div>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3>DNA</h3>
+            <label>Target amount (µg)
+              <input type="number" id="rd-mass-ug" min="0" step="any" value="2">
+            </label>
+            <div class="preset-row" id="rd-mass-presets">
+              <button type="button" class="preset-btn" data-preset="1.5">1.5 µg</button>
+              <button type="button" class="preset-btn" data-preset="2">2 µg</button>
+              <button type="button" class="preset-btn" data-preset="10">10 µg</button>
+            </div>
+            <label style="margin-top:10px;">Stock concentration (ng/µL)
+              <input type="number" id="rd-mass-dna-conc" min="0" step="any" value="500">
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Reaction</h3>
+            <label>Total volume (µL)
+              <input type="number" id="rd-mass-total" min="0" step="any" value="100">
+            </label>
+            <label>Units per µg DNA (per enzyme)
+              <input type="number" id="rd-mass-units-per-ug" min="0" step="any" value="1">
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Enzyme 1</h3>
+            <label>Stock concentration (U/µL)
+              <input type="number" id="rd-mass-enz1-conc" min="0" step="any" value="20">
+            </label>
+          </div>
+
+          <div class="card" id="rd-mass-enz2-wrap" style="display:none;">
+            <h3>Enzyme 2</h3>
+            <label>Stock concentration (U/µL)
+              <input type="number" id="rd-mass-enz2-conc" min="0" step="any" value="20">
+            </label>
+          </div>
+        </div>
+
+        <table class="fragment-table mm-table">
+          <tbody>
+            <tr><td>DNA</td><td class="mm-vol" id="rd-mass-out-dna">—</td></tr>
+            <tr><td>Enzyme 1</td><td class="mm-vol" id="rd-mass-out-enz1">—</td></tr>
+            <tr id="rd-mass-out-enz2-row" style="display:none;"><td>Enzyme 2</td><td class="mm-vol" id="rd-mass-out-enz2">—</td></tr>
+            <tr><td>10× NEB Buffer</td><td class="mm-vol" id="rd-mass-out-buffer">—</td></tr>
+            <tr class="mm-water-row"><td>ddH₂O</td><td class="mm-vol" id="rd-mass-out-water">—</td></tr>
+            <tr class="mm-mm-row"><td>Total</td><td class="mm-vol" id="rd-mass-out-total">—</td></tr>
+          </tbody>
+        </table>
+
+        <div class="result-sub" id="rd-mass-status"></div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code>units needed = target µg × units/µg (per enzyme); enzyme volume = units ÷ enzyme stock conc; DNA volume = (target µg × 1000) ÷ DNA stock conc; buffer = total ÷ 10; water = total − DNA − enzyme(s) − buffer</code>
+        </details>
+      </div>
+    </section>
+
+    <!-- ===================== GUIDE DESIGN (links out) ===================== -->
+    <section id="tool-guides" class="tool-panel">
+      <div class="tool-head">
+        <h2>CRISPR Guide Design</h2>
+      </div>
+      <p class="mode-desc">
+        Both of these are full genome-scale design pipelines (off-target search, scoring) that
+        can't be replicated as a page here — this tab just points to the right tool for the
+        organism you're working with.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>KO Guide Design — Mouse / Human</h3>
+          <p class="mode-desc" style="margin-bottom:10px;">
+            Kenna's local guide-design pipeline (hg38/mm39, offline). Runs only on this machine —
+            start "KO Guide Design" from the Desktop first.
+          </p>
+          <div class="result-sub" id="koguide-status">Checking status…</div>
+          <button type="button" class="add-row-btn" id="koguide-open">Open KO Guide Design (localhost:5001)</button>
+        </div>
+
+        <div class="card">
+          <h3>EuPaGDT — Toxoplasma / Plasmodium</h3>
+          <p class="mode-desc" style="margin-bottom:10px;">
+            VEuPathDB's guide design tool (grna.ctegd.uga.edu), with ToxoDB and PlasmoDB genomes
+            built in for off-target search — the right tool for parasite knockouts.
+          </p>
+          <button type="button" class="add-row-btn" id="eupagdt-open">Open EuPaGDT (VEuPathDB)</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Runs entirely in your browser — nothing is sent anywhere. Open <code>index.html</code> to use offline.</p>
+  </footer>
+
+</div>
+<script src="script.js"></script>
+</body>
+</html>
