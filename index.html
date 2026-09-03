@@ -20,6 +20,7 @@
     <button class="tool-nav-btn" data-tool="western">Western Sample Buffer</button>
     <button class="tool-nav-btn" data-tool="primer">Primer Tm / Ta</button>
     <button class="tool-nav-btn" data-tool="digest">Restriction Digest</button>
+    <button class="tool-nav-btn" data-tool="precip">NaOAc/EtOH Precipitation</button>
     <button class="tool-nav-btn" data-tool="guides">Guide Design</button>
     <button class="tool-nav-btn" disabled title="Add your next calculator here">+ More coming soon</button>
   </nav>
@@ -731,6 +732,59 @@
           <summary>Formula used</summary>
           <code>units needed = target µg × units/µg (per enzyme); enzyme volume = units ÷ enzyme stock conc; DNA volume = (target µg × 1000) ÷ DNA stock conc; buffer = total ÷ 10; water = total − DNA − enzyme(s) − buffer</code>
         </details>
+      </div>
+    </section>
+
+    <!-- ===================== NaOAc / ETHANOL PRECIPITATION ===================== -->
+    <section id="tool-precip" class="tool-panel">
+      <div class="tool-head">
+        <h2>Sodium Acetate / Ethanol Precipitation Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="precip">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="Sodium Acetate / Ethanol Precipitation Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+      <p class="mode-desc">
+        Standard NaOAc/ethanol DNA precipitation. Enter your sample (e.g. digest) volume to get
+        the 3M sodium acetate and 100% ethanol volumes to add — the wash and resuspension steps
+        are fixed per the protocol below.
+      </p>
+
+      <div class="card" style="max-width:320px;">
+        <h3>Sample</h3>
+        <label>Sample volume (µL)
+          <input type="number" id="pc-sample-vol" min="0" step="any" value="100">
+        </label>
+      </div>
+
+      <table class="fragment-table mm-table">
+        <tbody>
+          <tr><td>Sample</td><td class="mm-vol" id="pc-out-sample">—</td></tr>
+          <tr><td>3M sodium acetate, pH 5.2 (1/10 vol)</td><td class="mm-vol" id="pc-out-naoac">—</td></tr>
+          <tr class="mm-mm-row"><td>Volume before ethanol</td><td class="mm-vol" id="pc-out-pretotal">—</td></tr>
+          <tr><td>Ice-cold 100% ethanol (2.5x sample vol)</td><td class="mm-vol" id="pc-out-etoh">—</td></tr>
+          <tr class="mm-mm-row"><td>Total volume in tube</td><td class="mm-vol" id="pc-out-total">—</td></tr>
+        </tbody>
+      </table>
+
+      <details class="formula">
+        <summary>Formula used</summary>
+        <code>3M NaOAc pH 5.2 = sample vol &divide; 10; ice-cold 100% ethanol = 2.5 &times; sample vol (added after the NaOAc)</code>
+      </details>
+
+      <div class="mm-section">
+        <h3 class="mm-title">Protocol</h3>
+        <ol class="protocol-steps">
+          <li>Add 3M sodium acetate, pH 5.2 (1/10th sample volume) to the sample.</li>
+          <li>Add ice-cold 100% ethanol (2.5x sample volume) and mix well by inverting.</li>
+          <li>Put samples at -20&deg;C overnight.</li>
+          <li>Spin at 21,000 x g, 4&deg;C, for 30 min.</li>
+          <li>Decant supernatant by pouring — it's okay if some ethanol is left at the bottom.</li>
+          <li>Wash pellet in 500 &micro;L ice-cold 75% ethanol.</li>
+          <li>Spin at 21,000 x g, 4&deg;C, for 10 min.</li>
+          <li>Decant supernatant and dry pellet for 10-15 min.</li>
+          <li>Resuspend pellet in water once slightly damp. If overdried, heat at 55&deg;C to solubilize — make sure it is all solubilized.</li>
+        </ol>
       </div>
     </section>
 

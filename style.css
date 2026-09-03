@@ -355,6 +355,21 @@ input:focus {
   color: var(--accent);
 }
 
+.protocol-steps {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.protocol-steps li {
+  margin-bottom: 8px;
+}
+
+.protocol-steps li:last-child {
+  margin-bottom: 0;
+}
+
 .mm-vol .mm-note {
   display: block;
   font-weight: 400;

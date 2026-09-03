@@ -1497,6 +1497,7 @@ const EXPORT_BUILDERS = {
   western: buildWesternExport,
   primer: buildPrimerExport,
   digest: buildDigestExport,
+  precip: buildPrecipExport,
 };
 
 document.querySelectorAll(".export-btn").forEach((btn) => {
@@ -1506,6 +1507,75 @@ document.querySelectorAll(".export-btn").forEach((btn) => {
     downloadText(exportFilename(tool), text);
   });
 });
+
+// ================= SODIUM ACETATE / ETHANOL PRECIPITATION =================
+const pcSampleVol = document.getElementById("pc-sample-vol");
+const pcOutSample = document.getElementById("pc-out-sample");
+const pcOutNaoac = document.getElementById("pc-out-naoac");
+const pcOutPretotal = document.getElementById("pc-out-pretotal");
+const pcOutEtoh = document.getElementById("pc-out-etoh");
+const pcOutTotal = document.getElementById("pc-out-total");
+
+function calcPrecip() {
+  const sample = parseFloat(pcSampleVol.value);
+
+  if (!(sample > 0)) {
+    [pcOutSample, pcOutNaoac, pcOutPretotal, pcOutEtoh, pcOutTotal].forEach((el) => (el.textContent = "—"));
+    return;
+  }
+
+  const naoac = sample / 10;
+  const pretotal = sample + naoac;
+  const etoh = sample * 2.5;
+  const total = pretotal + etoh;
+
+  pcOutSample.textContent = `${fmt(sample)} µL`;
+  pcOutNaoac.textContent = `${fmt(naoac)} µL`;
+  pcOutPretotal.textContent = `${fmt(pretotal)} µL`;
+  pcOutEtoh.textContent = `${fmt(etoh)} µL`;
+  pcOutTotal.textContent = `${fmt(total)} µL`;
+}
+
+pcSampleVol.addEventListener("input", calcPrecip);
+calcPrecip();
+
+function buildPrecipExport() {
+  const lines = [
+    "Sodium Acetate / Ethanol Precipitation Calculator",
+    `Generated: ${new Date().toLocaleString()}`,
+    "",
+  ];
+
+  const sample = parseFloat(pcSampleVol.value);
+  if (!(sample > 0)) {
+    lines.push("Result: (enter a valid sample volume)");
+    return lines.join("\n");
+  }
+
+  const naoac = sample / 10;
+  const pretotal = sample + naoac;
+  const etoh = sample * 2.5;
+  const total = pretotal + etoh;
+
+  lines.push(`Sample: ${fmt(sample)} µL`);
+  lines.push(`3M sodium acetate, pH 5.2 (1/10 vol): ${fmt(naoac)} µL`);
+  lines.push(`Volume before ethanol: ${fmt(pretotal)} µL`);
+  lines.push(`Ice-cold 100% ethanol (2.5x sample vol): ${fmt(etoh)} µL`);
+  lines.push(`Total volume in tube: ${fmt(total)} µL`);
+
+  lines.push("", "Protocol:");
+  lines.push("  1. Add 3M sodium acetate, pH 5.2 (1/10th sample volume) to the sample.");
+  lines.push("  2. Add ice-cold 100% ethanol (2.5x sample volume) and mix well by inverting.");
+  lines.push("  3. Put samples at -20C overnight.");
+  lines.push("  4. Spin at 21,000 x g, 4C, for 30 min.");
+  lines.push("  5. Decant supernatant by pouring - it's okay if some ethanol is left at the bottom.");
+  lines.push("  6. Wash pellet in 500 uL ice-cold 75% ethanol.");
+  lines.push("  7. Spin at 21,000 x g, 4C, for 10 min.");
+  lines.push("  8. Decant supernatant and dry pellet for 10-15 min.");
+  lines.push("  9. Resuspend pellet in water once slightly damp. If overdried, heat at 55C to solubilize - make sure it is all solubilized.");
+
+  return lines.join("\n");
+}
 
 // ================= GUIDE DESIGN (links out) =================
 const KOGUIDE_URL = "http://127.0.0.1:5001/";
