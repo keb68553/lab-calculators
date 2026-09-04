@@ -23,6 +23,19 @@ function bpFromLength(value, unit) {
   return unit === "kb" ? n * 1000 : n;
 }
 
+// convert a volume input + unit ("uL"/"mL") to µL
+function volToUl(value, unit) {
+  const n = parseFloat(value);
+  if (!n || n <= 0) return NaN;
+  return unit === "mL" ? n * 1000 : n;
+}
+
+// format a µL amount, adding an mL equivalent once it's large enough to be handy
+function fmtVol(uL) {
+  if (!isFinite(uL)) return "—";
+  return uL >= 1000 ? `${fmt(uL)} µL (${fmt(uL / 1000, 3)} mL)` : `${fmt(uL)} µL`;
+}
+
 // ---- master mix solver ----
 // fragments: [{ label, targetNg, stockConc }]
 // Picks the largest pipetting-volume floor (between fallbackMin and idealMin) that still
@@ -1497,6 +1510,7 @@ const EXPORT_BUILDERS = {
   western: buildWesternExport,
   primer: buildPrimerExport,
   digest: buildDigestExport,
+  dilution: buildDilutionExport,
   precip: buildPrecipExport,
 };
 
@@ -1507,6 +1521,325 @@ document.querySelectorAll(".export-btn").forEach((btn) => {
     downloadText(exportFilename(tool), text);
   });
 });
+
+// ================= DILUTION & BUFFER =================
+document.getElementById("dilution-mode-switch").querySelectorAll(".mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.getElementById("dilution-mode-switch").querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll("#tool-dilution .mode-panel").forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`dilutionmode-${btn.dataset.mode}`).classList.add("active");
+  });
+});
+
+// ---- Ratio Dilution ----
+const rtRatio = document.getElementById("rt-ratio");
+const rtRatio2 = document.getElementById("rt-ratio2");
+const rtPresets = document.getElementById("rt-presets");
+const rtKnowSwitch = document.getElementById("rt-know-switch");
+const rtKnownTitle = document.getElementById("rt-known-title");
+const rtKnownVol = document.getElementById("rt-known-vol");
+const rtOutStock = document.getElementById("rt-out-stock");
+const rtOutDiluent = document.getElementById("rt-out-diluent");
+const rtOutTotal = document.getElementById("rt-out-total");
+const rtStatus = document.getElementById("rt-status");
+const rtFormula = document.getElementById("rt-formula");
+
+let rtKnow = "final";
+
+rtPresets.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    rtRatio.value = btn.dataset.preset;
+    calcRatio();
+  });
+});
+
+rtKnowSwitch.querySelectorAll(".mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    rtKnowSwitch.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    rtKnow = btn.dataset.know;
+    rtKnownTitle.textContent = rtKnow === "final" ? "Final volume needed" : "Stock/antibody you have";
+    calcRatio();
+  });
+});
+
+function combinedRatio() {
+  const r1 = parseFloat(rtRatio.value);
+  const r2 = parseFloat(rtRatio2.value);
+  if (!(r1 > 0)) return NaN;
+  return r2 > 0 ? r1 * r2 : r1;
+}
+
+function calcRatio() {
+  const ratio = combinedRatio();
+  const knownVol = parseFloat(rtKnownVol.value);
+
+  if (!(ratio > 0) || !(knownVol > 0)) {
+    [rtOutStock, rtOutDiluent, rtOutTotal].forEach((el) => (el.textContent = "—"));
+    rtStatus.textContent = "";
+    return;
+  }
+
+  let stockVol, total;
+  if (rtKnow === "final") {
+    total = knownVol;
+    stockVol = total / ratio;
+    rtFormula.textContent = "stock vol = final vol ÷ ratio; diluent = final vol − stock vol";
+  } else {
+    stockVol = knownVol;
+    total = stockVol * ratio;
+    rtFormula.textContent = "final vol = stock vol × ratio; diluent = final vol − stock vol";
+  }
+  const diluent = total - stockVol;
+
+  rtOutStock.textContent = fmtVol(stockVol);
+  rtOutDiluent.textContent = fmtVol(diluent);
+  rtOutTotal.textContent = fmtVol(total);
+
+  const r2 = parseFloat(rtRatio2.value);
+  rtStatus.textContent = r2 > 0
+    ? `Combined dilution: 1:${fmt(ratio)} (1:${fmt(parseFloat(rtRatio.value))} then 1:${fmt(r2)})`
+    : "";
+}
+
+[rtRatio, rtRatio2, rtKnownVol].forEach((el) => el.addEventListener("input", calcRatio));
+calcRatio();
+
+// ---- Mix & Check Concentration ----
+const mxRows = document.getElementById("mx-rows");
+const mxAddBtn = document.getElementById("mx-add-row");
+const mxUnitLabel = document.getElementById("mx-unit-label");
+const mxOutConc = document.getElementById("mx-out-conc");
+const mxOutTotal = document.getElementById("mx-out-total");
+const mxStatus = document.getElementById("mx-status");
+
+let mxCount = 0;
+
+function addMixRow(name = "", vol = "", unit = "mL", conc = "") {
+  mxCount += 1;
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input type="text" class="mix-name" value="${name || `Component ${mxCount}`}"></td>
+    <td>
+      <div class="length-input">
+        <input type="number" class="mix-vol" min="0" step="any" value="${vol}">
+        <select class="mix-unit">
+          <option value="uL" ${unit === "uL" ? "selected" : ""}>µL</option>
+          <option value="mL" ${unit === "mL" ? "selected" : ""}>mL</option>
+        </select>
+      </div>
+    </td>
+    <td><input type="number" class="mix-conc" min="0" step="any" value="${conc}"></td>
+    <td><button class="remove-row-btn" title="Remove component">✕</button></td>
+  `;
+  mxRows.appendChild(row);
+
+  row.querySelector(".mix-vol").addEventListener("input", calcMix);
+  row.querySelector(".mix-unit").addEventListener("change", calcMix);
+  row.querySelector(".mix-conc").addEventListener("input", calcMix);
+  row.querySelector(".remove-row-btn").addEventListener("click", () => {
+    row.remove();
+    calcMix();
+  });
+
+  calcMix();
+}
+
+function calcMix() {
+  let totalVol = 0;
+  let totalMass = 0;
+  let anyValid = false;
+
+  mxRows.querySelectorAll("tr").forEach((row) => {
+    const vol = volToUl(row.querySelector(".mix-vol").value, row.querySelector(".mix-unit").value);
+    const conc = parseFloat(row.querySelector(".mix-conc").value);
+    if (!(vol > 0) || !(conc >= 0)) return;
+    totalVol += vol;
+    totalMass += vol * conc;
+    anyValid = true;
+  });
+
+  if (!anyValid || totalVol <= 0) {
+    mxOutConc.textContent = "—";
+    mxOutTotal.textContent = "";
+    mxStatus.textContent = "";
+    return;
+  }
+
+  const unit = mxUnitLabel.value.trim() || "mM";
+  const resultConc = totalMass / totalVol;
+
+  mxOutConc.textContent = `${fmt(resultConc, 3)} ${unit}`;
+  mxOutTotal.textContent = `Total volume: ${fmtVol(totalVol)}`;
+  mxStatus.textContent = "";
+}
+
+mxAddBtn.addEventListener("click", () => addMixRow());
+mxUnitLabel.addEventListener("input", calcMix);
+
+addMixRow("Component 1", 1.5, "mL", 200);
+addMixRow("Component 2", 200, "uL", 300);
+
+// ---- Buffer Recipe (Stock -> Final) ----
+const bfFinalVol = document.getElementById("bf-final-vol");
+const bfFinalUnit = document.getElementById("bf-final-unit");
+const bfDiluent = document.getElementById("bf-diluent");
+const bfRows = document.getElementById("bf-rows");
+const bfAddBtn = document.getElementById("bf-add-row");
+const bfOutDiluentLabel = document.getElementById("bf-out-diluent-label");
+const bfOutDiluent = document.getElementById("bf-out-diluent");
+const bfOutTotal = document.getElementById("bf-out-total");
+const bfStatus = document.getElementById("bf-status");
+
+let bfCount = 0;
+
+function addBfRow(name = "", stock = "", unit = "", finalConc = "") {
+  bfCount += 1;
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input type="text" class="bf-name" value="${name || `Reagent ${bfCount}`}"></td>
+    <td><input type="number" class="bf-stock" min="0" step="any" value="${stock}"></td>
+    <td><input type="text" class="bf-unit" placeholder="mM" value="${unit}"></td>
+    <td><input type="number" class="bf-final" min="0" step="any" value="${finalConc}"></td>
+    <td class="mm-vol bf-vol">—</td>
+    <td><button class="remove-row-btn" title="Remove reagent">✕</button></td>
+  `;
+  bfRows.appendChild(row);
+
+  row.querySelector(".bf-stock").addEventListener("input", calcBf);
+  row.querySelector(".bf-final").addEventListener("input", calcBf);
+  row.querySelector(".remove-row-btn").addEventListener("click", () => {
+    row.remove();
+    calcBf();
+  });
+
+  calcBf();
+}
+
+function calcBf() {
+  const finalVolUl = volToUl(bfFinalVol.value, bfFinalUnit.value);
+  bfOutDiluentLabel.textContent = bfDiluent.value.trim() || "Diluent";
+
+  if (!(finalVolUl > 0)) {
+    bfRows.querySelectorAll(".bf-vol").forEach((el) => (el.textContent = "—"));
+    bfOutDiluent.textContent = "—";
+    bfOutTotal.textContent = "—";
+    bfStatus.textContent = "";
+    return;
+  }
+
+  let sumVol = 0;
+  let anyValid = false;
+
+  bfRows.querySelectorAll("tr").forEach((row) => {
+    const stock = parseFloat(row.querySelector(".bf-stock").value);
+    const finalConc = parseFloat(row.querySelector(".bf-final").value);
+    const cell = row.querySelector(".bf-vol");
+    if (!(stock > 0) || !(finalConc >= 0)) {
+      cell.textContent = "—";
+      return;
+    }
+    const vol = (finalConc * finalVolUl) / stock;
+    cell.textContent = fmtVol(vol);
+    sumVol += vol;
+    anyValid = true;
+  });
+
+  if (!anyValid) {
+    bfOutDiluent.textContent = "—";
+    bfOutTotal.textContent = "—";
+    bfStatus.textContent = "";
+    return;
+  }
+
+  const diluentVol = finalVolUl - sumVol;
+  bfOutDiluent.textContent = fmtVol(Math.max(diluentVol, 0));
+  bfOutTotal.textContent = fmtVol(finalVolUl);
+  bfStatus.textContent = diluentVol < 0
+    ? `Reagent volumes (${fmt(sumVol)} µL) exceed the final volume — increase final volume or use a more concentrated stock.`
+    : "";
+}
+
+bfAddBtn.addEventListener("click", () => addBfRow());
+[bfFinalVol, bfFinalUnit].forEach((el) => el.addEventListener("input", calcBf));
+bfDiluent.addEventListener("input", calcBf);
+
+// seed with a typical LMNG/CHS lysis buffer recipe
+addBfRow("HEPES pH 7.4", 1000, "mM", 50);
+addBfRow("NaCl", 1000, "mM", 150);
+addBfRow("LMNG/CHS", 10, "%", 0.5);
+addBfRow("Glycerol", 50, "%", 5);
+
+function buildDilutionExport() {
+  const lines = ["Dilution & Buffer Calculator", `Generated: ${new Date().toLocaleString()}`, ""];
+  const activeMode = document.getElementById("dilution-mode-switch").querySelector(".mode-btn.active").dataset.mode;
+
+  if (activeMode === "ratio") {
+    lines.push("Mode: Ratio Dilution", "");
+    const ratio = combinedRatio();
+    const knownVol = parseFloat(rtKnownVol.value);
+    lines.push(`Ratio: 1:${rtRatio.value}${parseFloat(rtRatio2.value) > 0 ? ` then 1:${rtRatio2.value} (combined 1:${fmt(ratio)})` : ""}`);
+    lines.push(`Known: ${rtKnownTitle.textContent} = ${rtKnownVol.value} µL`, "");
+    if (!(ratio > 0) || !(knownVol > 0)) {
+      lines.push("Result: (enter valid values)");
+    } else {
+      const total = rtKnow === "final" ? knownVol : knownVol * ratio;
+      const stockVol = rtKnow === "final" ? total / ratio : knownVol;
+      lines.push(`Stock/antibody: ${fmtVol(stockVol)}`);
+      lines.push(`Diluent: ${fmtVol(total - stockVol)}`);
+      lines.push(`Total (final) volume: ${fmtVol(total)}`);
+    }
+  } else if (activeMode === "mix") {
+    lines.push("Mode: Mix & Check Concentration", "");
+    let totalVol = 0;
+    let totalMass = 0;
+    mxRows.querySelectorAll("tr").forEach((row) => {
+      const name = row.querySelector(".mix-name").value;
+      const volRaw = row.querySelector(".mix-vol").value;
+      const unit = row.querySelector(".mix-unit").value;
+      const conc = row.querySelector(".mix-conc").value;
+      lines.push(`  ${name}: ${volRaw} ${unit === "mL" ? "mL" : "µL"} @ ${conc} ${mxUnitLabel.value}`);
+      const vol = volToUl(volRaw, unit);
+      if (vol > 0 && parseFloat(conc) >= 0) {
+        totalVol += vol;
+        totalMass += vol * parseFloat(conc);
+      }
+    });
+    lines.push("");
+    if (totalVol > 0) {
+      lines.push(`Resulting concentration: ${fmt(totalMass / totalVol, 3)} ${mxUnitLabel.value}`);
+      lines.push(`Total volume: ${fmtVol(totalVol)}`);
+    } else {
+      lines.push("Result: (enter valid values)");
+    }
+  } else {
+    lines.push("Mode: Buffer Recipe (Stock → Final)", "");
+    const finalVolUl = volToUl(bfFinalVol.value, bfFinalUnit.value);
+    lines.push(`Final volume: ${bfFinalVol.value} ${bfFinalUnit.value === "mL" ? "mL" : "µL"}`, "");
+    if (!(finalVolUl > 0)) {
+      lines.push("Result: (enter a valid final volume)");
+    } else {
+      let sumVol = 0;
+      bfRows.querySelectorAll("tr").forEach((row) => {
+        const name = row.querySelector(".bf-name").value;
+        const stock = parseFloat(row.querySelector(".bf-stock").value);
+        const unit = row.querySelector(".bf-unit").value;
+        const finalConc = parseFloat(row.querySelector(".bf-final").value);
+        if (stock > 0 && finalConc >= 0) {
+          const vol = (finalConc * finalVolUl) / stock;
+          sumVol += vol;
+          lines.push(`${name}: ${stock} ${unit} stock → ${finalConc} ${unit} final = ${fmtVol(vol)}`);
+        }
+      });
+      lines.push(`${bfDiluent.value || "Diluent"}: ${fmtVol(Math.max(finalVolUl - sumVol, 0))}`);
+      lines.push(`Total: ${fmtVol(finalVolUl)}`);
+      if (finalVolUl - sumVol < 0) lines.push("", "Note: reagent volumes exceed the final volume.");
+    }
+  }
+
+  return lines.join("\n");
+}
 
 // ================= SODIUM ACETATE / ETHANOL PRECIPITATION =================
 const pcSampleVol = document.getElementById("pc-sample-vol");

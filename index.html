@@ -20,6 +20,7 @@
     <button class="tool-nav-btn" data-tool="western">Western Sample Buffer</button>
     <button class="tool-nav-btn" data-tool="primer">Primer Tm / Ta</button>
     <button class="tool-nav-btn" data-tool="digest">Restriction Digest</button>
+    <button class="tool-nav-btn" data-tool="dilution">Dilution &amp; Buffer</button>
     <button class="tool-nav-btn" data-tool="precip">NaOAc/EtOH Precipitation</button>
     <button class="tool-nav-btn" data-tool="guides">Guide Design</button>
     <button class="tool-nav-btn" disabled title="Add your next calculator here">+ More coming soon</button>
@@ -731,6 +732,191 @@
         <details class="formula">
           <summary>Formula used</summary>
           <code>units needed = target µg × units/µg (per enzyme); enzyme volume = units ÷ enzyme stock conc; DNA volume = (target µg × 1000) ÷ DNA stock conc; buffer = total ÷ 10; water = total − DNA − enzyme(s) − buffer</code>
+        </details>
+      </div>
+    </section>
+
+    <!-- ===================== DILUTION & BUFFER ===================== -->
+    <section id="tool-dilution" class="tool-panel">
+      <div class="tool-head">
+        <h2>Dilution &amp; Buffer Calculator</h2>
+        <div class="tool-head-actions">
+          <button type="button" class="export-btn" data-tool="dilution">Export .txt</button>
+          <button type="button" class="print-btn" data-print-title="Dilution & Buffer Calculator">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="dilution-mode-switch">
+        <button class="mode-btn active" data-mode="ratio">Ratio Dilution (e.g. Antibody)</button>
+        <button class="mode-btn" data-mode="mix">Mix &amp; Check Concentration</button>
+        <button class="mode-btn" data-mode="recipe">Buffer Recipe (Stock &rarr; Final)</button>
+      </div>
+
+      <!-- ===================== RATIO DILUTION ===================== -->
+      <div id="dilutionmode-ratio" class="mode-panel active">
+        <p class="mode-desc">
+          For simple "1 in N" dilutions (antibodies, peptides, etc.) — uses the standard lab
+          convention that <strong>1:300</strong> means 1 part concentrate brought up to a total
+          of 300 parts (not 300 parts of diluent added on top).
+        </p>
+
+        <div class="card" style="max-width:360px;">
+          <h3>Dilution ratio</h3>
+          <label>1 part in
+            <div class="ratio-pair">
+              <span>1 :</span>
+              <input type="number" id="rt-ratio" min="0" step="any" value="300">
+            </div>
+          </label>
+          <div class="preset-row" id="rt-presets">
+            <button type="button" class="preset-btn" data-preset="5">1:5</button>
+            <button type="button" class="preset-btn" data-preset="100">1:100</button>
+            <button type="button" class="preset-btn" data-preset="300">1:300</button>
+            <button type="button" class="preset-btn" data-preset="500">1:500</button>
+            <button type="button" class="preset-btn" data-preset="1000">1:1000</button>
+            <button type="button" class="preset-btn" data-preset="2500">1:2500</button>
+          </div>
+          <label style="margin-top:10px;">Then dilute that 1 part in <em>(optional &mdash; for serial dilutions)</em>
+            <div class="ratio-pair">
+              <span>1 :</span>
+              <input type="number" id="rt-ratio2" min="0" step="any" placeholder="e.g. 100">
+            </div>
+          </label>
+        </div>
+
+        <div class="mode-switch" id="rt-know-switch">
+          <button class="mode-btn active" data-know="final">I know the final volume needed</button>
+          <button class="mode-btn" data-know="stock">I know the amount of stock/antibody I have</button>
+        </div>
+
+        <div class="card" style="max-width:320px;">
+          <h3 id="rt-known-title">Final volume needed</h3>
+          <label>Volume (&micro;L)
+            <input type="number" id="rt-known-vol" min="0" step="any" value="1000">
+          </label>
+        </div>
+
+        <table class="fragment-table mm-table">
+          <tbody>
+            <tr><td>Stock / antibody</td><td class="mm-vol" id="rt-out-stock">—</td></tr>
+            <tr><td>Diluent</td><td class="mm-vol" id="rt-out-diluent">—</td></tr>
+            <tr class="mm-mm-row"><td>Total (final) volume</td><td class="mm-vol" id="rt-out-total">—</td></tr>
+          </tbody>
+        </table>
+
+        <div class="result-sub" id="rt-status"></div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code id="rt-formula">stock vol = final vol ÷ ratio; diluent = final vol − stock vol</code>
+        </details>
+      </div>
+
+      <!-- ===================== MIX & CHECK CONCENTRATION ===================== -->
+      <div id="dilutionmode-mix" class="mode-panel">
+        <p class="mode-desc">
+          Combine two or more volumes of the same reagent at different concentrations and find
+          the actual resulting concentration — e.g. mixing leftover buffer stocks. All rows must
+          use the same concentration unit.
+        </p>
+
+        <div class="card" style="max-width:280px;">
+          <h3>Concentration unit</h3>
+          <label>Unit label (for display only)
+            <input type="text" id="mx-unit-label" value="mM">
+          </label>
+        </div>
+
+        <div class="table-scroll">
+          <table class="fragment-table" id="mx-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Volume</th>
+                <th>Concentration</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="mx-rows"></tbody>
+          </table>
+        </div>
+
+        <button class="add-row-btn" id="mx-add-row">+ Add component</button>
+
+        <div class="result">
+          <div class="result-main">
+            <span class="result-label">Resulting concentration</span>
+            <span class="result-value" id="mx-out-conc">—</span>
+          </div>
+          <div class="result-sub" id="mx-out-total"></div>
+        </div>
+        <div class="result-sub" id="mx-status"></div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code>resulting conc = &Sigma;(conc &times; vol) &divide; &Sigma;(vol) &mdash; a volume-weighted average</code>
+        </details>
+      </div>
+
+      <!-- ===================== BUFFER RECIPE (STOCK -> FINAL) ===================== -->
+      <div id="dilutionmode-recipe" class="mode-panel">
+        <p class="mode-desc">
+          Build a multi-component buffer from stock solutions: set a final volume, then for each
+          reagent enter its stock concentration and the concentration you want in the final
+          buffer. Volume to pipette = final conc &times; final volume &divide; stock conc
+          (C&#8321;V&#8321; = C&#8322;V&#8322;) &mdash; keep each reagent's stock and final
+          concentration in the <em>same</em> unit (e.g. both mM, or both %).
+        </p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3>Final volume</h3>
+            <div class="length-input">
+              <input type="number" id="bf-final-vol" min="0" step="any" value="5">
+              <select id="bf-final-unit">
+                <option value="uL">µL</option>
+                <option value="mL" selected>mL</option>
+              </select>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Diluent</h3>
+            <label>Name
+              <input type="text" id="bf-diluent" value="ddH2O">
+            </label>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table class="fragment-table" id="bf-table">
+            <thead>
+              <tr>
+                <th>Reagent</th>
+                <th>Stock conc</th>
+                <th>Unit</th>
+                <th>Final conc</th>
+                <th>Volume</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="bf-rows"></tbody>
+          </table>
+        </div>
+
+        <button class="add-row-btn" id="bf-add-row">+ Add reagent</button>
+
+        <table class="fragment-table mm-table" style="margin-top:14px;">
+          <tbody>
+            <tr class="mm-water-row"><td id="bf-out-diluent-label">ddH2O</td><td class="mm-vol" id="bf-out-diluent">—</td></tr>
+            <tr class="mm-mm-row"><td>Total</td><td class="mm-vol" id="bf-out-total">—</td></tr>
+          </tbody>
+        </table>
+
+        <div class="result-sub" id="bf-status"></div>
+
+        <details class="formula">
+          <summary>Formula used</summary>
+          <code>volume = final conc &times; final volume &divide; stock conc; diluent = final volume &minus; &Sigma;(reagent volumes)</code>
         </details>
       </div>
     </section>
